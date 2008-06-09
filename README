@@ -1,0 +1,11 @@
+Whistler is a Lisp parser and (eventually) evaluator, written in Ruby.
+
+Why?  Because I wanted to write one.
+
+Whistler isn't meant to compete with, or replace, or whatever, any other
+Lisps written in Ruby, or to serve any practical purpose.  It's entirely
+pedagogical.
+
+The main idea (at the moment) is to have a basic parser that yields
+tokens to a parser/AST evaluator, and then write different parsers/AST
+evaluators.
