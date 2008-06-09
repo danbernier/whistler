@@ -1,5 +1,5 @@
 require 'test/unit'
-require '../parse_lisp'
+require 'parse_lisp'
 
 class ParserTests < Test::Unit::TestCase
     def test_tokenize
