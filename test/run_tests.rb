@@ -1,4 +1,5 @@
-puts Dir.pwd
-Dir.chdir '..' if Dir.pwd =~ /test$/
-Dir.glob('test/test_*.rb') { |t| puts `ruby #{t}` }
-puts Dir.pwd
+$LOAD_PATH.unshift './lib'
+Dir.glob('test/test_*.rb') do |t|
+	puts t
+	load t
+end
