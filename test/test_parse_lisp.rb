@@ -1,3 +1,7 @@
+if $0 == __FILE__
+	$LOAD_PATH.unshift '../lib'
+end
+
 require 'test/unit'
 require 'parse_lisp'
 
