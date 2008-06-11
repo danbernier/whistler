@@ -65,4 +65,9 @@ class BasicLispTest < Test::Unit::TestCase
         
 		assert_equal('fake', lw.lookup_in_table(:bogus, table) {'fake'})  # I don't believe we'll use it quite like this, but...
 	end
+    
+    def test_add1
+        lw = LittleWhistler.new
+        assert_equal(4, lw.eval("(add1 3)"))
+    end
 end

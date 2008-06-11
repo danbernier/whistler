@@ -70,19 +70,9 @@ class LittleWhistler
         end
     end
 
-	%{
-    def eval(lisp)
-        eval_list(@lp.parse(lisp))
+    def eval(lisp) # TODO move this somewhere else
+        value(@lp.parse(lisp))
     end
-    
-    def eval_list(l)
-        func = @funcs[first(l)]
-        func[*rest(l).map{|a| eval_atom(a) }]
-    end
-    def eval_atom(a)
-        a =~ /\d+/ ? a.to_i : a
-    end
-	}
 	
 	def new_entry(names, vals)
 		[names, vals]
@@ -132,23 +122,23 @@ class LittleWhistler
                                 # and couldn't many of these be implemented in scheme, anyway?  wouldn't they be identifiers, then?
     def atom_to_action(e)
         if number? e || @@consts.include?(e)
-            @@const
+            @const
         else
-            @@identifier
+            @identifier
         end
     end
-    @@special_forms = [:quote, :lambda, :cond]  # include :define ?  (they say to rely on Y-comb)  and what about and & or?
+    @@special_forms = [:quote, :lambda, :cond]  # include :define ?  (they say to rely on Y-comb)  and what about :and & :or?
     def list_to_action(e)
         if atom? e
             if e == :quote
-                @@quote
+                @quote
             elsif e == :lambda
-                @@lambda
+                @lambda
             elsif e == :cond
-                @@cond
+                @cond
             end
         else
-            @@application  # -> will become a function
+            @application  # -> will become a function
         end     
     end
     
@@ -157,6 +147,8 @@ class LittleWhistler
         meaning(e, [])  # [] is the empty table
     end
     def meaning(e, table)
+        puts e
+        puts expression_to_action(e)
         (expression_to_action(e)).call(e, table)
     end
     
@@ -167,7 +159,7 @@ class LittleWhistler
     # Note: these guys are class vars because we want to return them
     # from *_to_action methods.  Once it's running, rubify it.
     
-    @@const = lambda do |e, table|
+    @const = lambda do |e, table|
         if literal? e  # bool or number.  Also strings?
             e
         else
@@ -175,15 +167,18 @@ class LittleWhistler
         end
     end
     
-    @@quote = lambda do |e, table|
+    @quote = lambda do |e, table|
         second(e)  # e should look like: [:quote, e]
     end
     
-    @@identifier = lambda do |e, table|
-        lookup_in_table(e, table) { |name| @@quote[name] }  # "Let's hope this is never used.  Why?"
+    @identifier = lambda do |e, table|
+        lookup_in_table(e, table) { |name| @quote[name] }  # "Let's hope this is never used.  Why?"
+        # I think they mean, hope the block is never used...because if it is, there's an identifier we can't recognize.
+        # Which is really just the scheme programmer's mistake.  No biggie.
+        # But maybe I'm wrong.
     end
     
-    @@lambda = lambda do |e, table|
+    @lambda = lambda do |e, table|
         [:non_primitive, table, rest(e)]  # [:non-primitive, <table>, <formals>, <body>]
     end
     
@@ -203,7 +198,7 @@ class LittleWhistler
         end 
     end
     
-    @@cond = lambda do |e, table|
+    @cond = lambda do |e, table|
         evcon(rest(e), table)
     end
     
@@ -216,7 +211,7 @@ class LittleWhistler
         end
     end
     
-    @@application = lambda do |e, table|
+    @application = lambda do |e, table|
         apply(meaning(function_of(e), table),
               evlis(arguments_of(e), table))
     end
