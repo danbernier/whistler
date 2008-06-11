@@ -16,6 +16,8 @@ class ParserTests < Test::Unit::TestCase
         tests['(< 3 2 569)'] = %w[( < 3 2 569 )]
         tests['3'] = ['3']
         tests['//'] = ['//']
+        tests['#t'] = ['#t']
+        tests['#f'] = ['#f']
         
         tests.each do |lisp, expected_tokens|
             lp.tokenize(lisp).each { |actual_token| assert_equal(expected_tokens.shift, actual_token) }
@@ -26,11 +28,14 @@ class ParserTests < Test::Unit::TestCase
         lp = LispParser.new
         
         tests = {}
-        tests['(+ 2 3)'] = %w[+ 2 3]
-        tests['3'] = '3'
-        tests['(* (+ 3 2) (/ 4 7))'] = ['*', %w[+ 3 2], %w[/ 4 7]]
+        tests['(+ 2 3)'] = [:+, 2, 3]
+        tests['3'] = 3
+        tests['(* (+ 3 2) (/ 4 7))'] = [:*, [:+, 3, 2], [:/, 4, 7]]
+        tests["(cons a (quote (b c)))"] = [:cons, :a, [:quote, [:b, :c]]]
+        tests['#t'] = true
+        tests['#f'] = false
         
-        tests.each do |lisp, nodes|        
+        tests.each do |lisp, nodes|
             assert_equal_trees(nodes, lp.to_ast(lp.tokenize(lisp)))
         end
     end
@@ -38,17 +43,21 @@ class ParserTests < Test::Unit::TestCase
     def assert_equal_trees(expected, actual)
         
         def is_ary(a); a.respond_to? :to_ary; end
-        
-        list = expected.zip actual
-        list.each do |exp, act|
-            if is_ary(exp) && is_ary(act)
-                assert_equal_trees(exp, act)
-            elsif !is_ary(exp) && !is_ary(act)
-                assert_equal(exp, act)
-            elsif is_ary(exp)
-                flunk("Expected an array, got: #{act}")
-            else
-                flunk("Expected #{act}, got an array: #{exp}")
+
+        if !is_ary(expected) && !is_ary(actual)
+            assert_equal(expected, actual)
+        else
+            list = expected.zip actual
+            list.each do |exp, act|
+                if is_ary(exp) && is_ary(act)
+                    assert_equal_trees(exp, act)
+                elsif !is_ary(exp) && !is_ary(act)
+                    assert_equal(exp, act)
+                elsif is_ary(exp)
+                    flunk("Expected an array, got: #{act}")
+                else
+                    flunk("Expected #{act}, got an array: #{exp}")
+                end
             end
         end
     end
