@@ -14,6 +14,7 @@ class LittleWhistler
     def first(ary)
         ary[0]
     end
+    alias :car :first
 	def second(ary)
 		ary[1]
 	end
@@ -23,6 +24,7 @@ class LittleWhistler
     def rest(ary)
         ary[1..-1]
     end
+    alias :cdr :rest
     def atom?(x)
         Symbol === x || number?(x)  # implemented in LSer as (and (not (pair? x)) (not (null? x)))))
     end
@@ -34,6 +36,38 @@ class LittleWhistler
     end
     def literal?(x)
         number?(x) || bool?(x)   # also strings?
+    end
+    def cons(x, l) # the magnificent
+        [x] + l
+    end
+    def eq?(a, b)
+        a == b  # make ===?  or what else?
+    end
+    def null?(x)
+        x == nil || x == []  # TODO have to think about that [] part...or maybe it's the nil part i have to think about?  should we allow for a symbol to be null?
+    end
+
+    # candidates for being pushed into scheme...
+    def zero?(a)
+        a == 0
+    end
+    def add1(a)
+        if number?(a)
+            a + 1
+        else
+            raise "add1 expects a number, got #{a}"
+        end
+    end
+    def sub1(a)
+        if number?(a)
+            if a > 0
+                a - 1
+            else
+                raise "sub1 expects a number greater than zero, got #{a}"
+            end
+        else
+            raise "sub1 expects a number, got #{a}"
+        end
     end
 
 	%{
@@ -103,7 +137,7 @@ class LittleWhistler
             @@identifier
         end
     end
-    @@special_forms = [:quote, :lambda, :cond]  # include :define ?  (they say to rely on Y-comb)
+    @@special_forms = [:quote, :lambda, :cond]  # include :define ?  (they say to rely on Y-comb)  and what about and & or?
     def list_to_action(e)
         if atom? e
             if e == :quote
@@ -114,7 +148,7 @@ class LittleWhistler
                 @@cond
             end
         else
-            :application  # -> will become a function
+            @@application  # -> will become a function
         end     
     end
     
@@ -152,9 +186,6 @@ class LittleWhistler
     @@lambda = lambda do |e, table|
         [:non_primitive, table, rest(e)]  # [:non-primitive, <table>, <formals>, <body>]
     end
-    alias :table_of :first
-    alias :formals_of :second
-    alias :body_of :third
     
     def evcon(lines, table)
         def else?(x)
@@ -175,4 +206,72 @@ class LittleWhistler
     @@cond = lambda do |e, table|
         evcon(rest(e), table)
     end
+    
+    def evlis(args, table)  # like the king.  almost.
+        if args.empty?
+            []
+        else
+            cons(meaning(car(args), table),
+                 evlis(cdr(args), table))
+        end
+    end
+    
+    @@application = lambda do |e, table|
+        apply(meaning(function_of(e), table),
+              evlis(arguments_of(e), table))
+    end
+    alias :function_of :first
+    alias :arguments_of :rest
+    
+    def primitive?(l)
+        first(l) == :primitive
+    end
+    def non_primitive?(l)
+        first(l) == :non_primitive
+    end
+    
+    def apply(fun, vals)
+        if primitive?(fun)
+            apply_primitive(second(fun), vals)
+        else
+            apply_closure(second(fun), vals)
+        end
+    end
+    
+    def apply_primitive(name, vals)
+        
+        def _atom?(x)
+            if atom?(x)
+                true
+            elsif null?(x)
+                false
+            elsif first(x) == :primitive || first(x) == :non_primitive
+                true
+            else
+                false
+            end
+            
+            # atom?(x) || !null?(x) || first(x) == :primitive || first(x) == :non_primitive
+        end
+        
+        case name
+        when :car, :cdr, :null?, :zero?, :add1, :sub1, :number?
+            self.send(name, first(vals))
+        when :cons
+            cons(first(vals), second(vals))
+        when :eq?
+            eq?(first(vals), second(vals))
+        when :atom?
+            _atom?(first(vals))
+        end
+    end
+    def apply_closure(closure, vals)
+        meaning(body_of(closure),
+                extend_table(
+                    new_entry(formals_of(closure), vals),
+                    table_of(closure)))
+    end
+    alias :table_of :first
+    alias :formals_of :second
+    alias :body_of :third
 end
